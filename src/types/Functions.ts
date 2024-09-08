@@ -1,6 +1,6 @@
 export type UpdatingFunction = (
   id: number,
-  updatedTitle?: string | null,
-) => Promise<void> | void;
+  updatedTitle?: string,
+) => Promise<void>;
 
-export type DeletingFunction = (itemID: number) => void;
+export type DeletingFunction = (itemID: number) => Promise<void>;

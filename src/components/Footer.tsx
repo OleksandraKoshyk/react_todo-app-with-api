@@ -2,6 +2,7 @@ import classNames from 'classnames';
 import React from 'react';
 import { Filter } from '../types/Filter';
 import { Todo } from '../types/Todo';
+import { filterLinkKeys, normalizeFilterName } from '../api/filters';
 
 type Props = {
   todos: Todo[];
@@ -18,15 +19,6 @@ export const Footer: React.FC<Props> = React.memo(
     ) => {
       e.preventDefault();
       onClick(trigger);
-    };
-
-    const normalizeFilterName = (filterName: string) =>
-      filterName[0].toUpperCase() + filterName.slice(1);
-
-    const filterLinkKeys = {
-      all: 'FilterLinkAll',
-      active: 'FilterLinkActive',
-      completed: 'FilterLinkCompleted',
     };
 
     return (

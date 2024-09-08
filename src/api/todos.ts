@@ -10,7 +10,7 @@ export const getTodos = () => {
 
 // Add more methods here
 
-export function deleteTodo(todoId: string) {
+export function deleteTodo(todoId: number) {
   return client.delete(`/todos/${todoId}`);
 }
 
@@ -27,4 +27,8 @@ export function filtering(todos: Todo[], filter: Filter) {
     default:
       return todos;
   }
+}
+
+export function updateTodo(itemId: number, updatedTodo: Todo) {
+  return client.patch<Todo>(`/todos/${itemId}`, updatedTodo);
 }

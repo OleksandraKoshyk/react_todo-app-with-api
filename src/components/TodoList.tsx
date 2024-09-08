@@ -30,7 +30,12 @@ export const TodoList: React.FC<Props> = React.memo(
 
           {tempTodoTitle && (
             <CSSTransition key={0} timeout={300} classNames="temp-item">
-              <TodoItem todo={tempTodoTitle} isProcessed={true} />
+              <TodoItem
+                todo={tempTodoTitle}
+                isProcessed={true}
+                onDelete={() => onDeleteItem(tempTodoTitle.id)}
+                onUpdate={onUpdate}
+              />
             </CSSTransition>
           )}
         </TransitionGroup>

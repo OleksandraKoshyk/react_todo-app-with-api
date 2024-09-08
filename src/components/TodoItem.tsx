@@ -4,16 +4,16 @@ import classNames from 'classnames';
 import { UpdatingFunction, DeletingFunction } from '../types/Functions';
 type Props = {
   isProcessed: boolean;
-  onDelete?: DeletingFunction;
-  onUpdate?: UpdatingFunction;
+  onDelete: DeletingFunction;
+  onUpdate: UpdatingFunction;
   todo: Todo;
 };
 
 export const TodoItem: React.FC<Props> = ({
   todo,
   isProcessed,
-  onUpdate = () => {},
-  onDelete = () => {},
+  onUpdate,
+  onDelete,
 }) => {
   const { title, completed, id } = todo;
   const [redacting, setRedacting] = useState(false);
@@ -30,14 +30,32 @@ export const TodoItem: React.FC<Props> = ({
     }
   }, [redacting]);
 
-  const handleSubmit = () => {
-    const result = onUpdate(todo.id, newTitle);
-
-    if (result instanceof Promise) {
-      result.then(() => setRedacting(false));
+  const handleUpdate = () => {
+    if (!newTitle.trim()) {
+      onDelete(id).catch(() => setRedacting(true));
+    } else if (newTitle !== title) {
+      onUpdate(id, newTitle)
+        .then(() => setRedacting(false))
+        .catch(() => setRedacting(true));
     } else {
       setRedacting(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    handleUpdate();
+  };
+
+  const handleEscape = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      setRedacting(false);
+      setNewTitle(todo.title);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewTitle(e.target.value);
   };
 
   return (
@@ -74,27 +92,17 @@ export const TodoItem: React.FC<Props> = ({
           </button>
         </>
       ) : (
-        <form
-          onSubmit={e => {
-            e.preventDefault();
-            handleSubmit();
-          }}
-        >
+        <form onSubmit={handleSubmit}>
           <input
             data-cy="TodoTitleField"
             type="text"
             className="todo__title-field"
             placeholder="Empty todo will be deleted"
             value={newTitle}
-            onChange={e => setNewTitle(e.target.value)}
+            onChange={handleChange}
             ref={inputRef}
-            onBlur={() => handleSubmit()}
-            onKeyUp={e => {
-              if (e.key === 'Escape') {
-                setRedacting(false);
-                setNewTitle(todo.title);
-              }
-            }}
+            onBlur={() => handleUpdate()}
+            onKeyUp={handleEscape}
           />
         </form>
       )}

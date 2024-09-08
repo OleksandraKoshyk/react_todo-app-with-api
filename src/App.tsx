@@ -7,7 +7,6 @@ import { Todo } from './types/Todo';
 import { TodoList } from './components/TodoList';
 import { Filter } from './types/Filter';
 import classNames from 'classnames';
-import { client } from './utils/fetchClient';
 import { Footer } from './components/Footer';
 import { UpdatingFunction, DeletingFunction } from './types/Functions';
 
@@ -32,7 +31,7 @@ export const App: React.FC = () => {
     setChangingIds(prev => prev.filter(id => id !== itemId));
   };
 
-  const showErrorMes = (message: string) => {
+  const showErrorMessage = (message: string) => {
     setErrorMessage(message);
     setTimeout(() => {
       setErrorMessage('');
@@ -45,7 +44,7 @@ export const App: React.FC = () => {
     const title = newTodoTitle.trim();
 
     if (title.length === 0) {
-      showErrorMes('Title should not be empty');
+      showErrorMessage('Title should not be empty');
 
       return;
     }
@@ -66,18 +65,18 @@ export const App: React.FC = () => {
 
     startRedacting(tempId);
 
-    client
-      .post<Todo>('/todos', newTodo)
+    todoServices
+      .createTodo(newTodo)
       .then(res => {
         setTempTodo(null);
         setTodos(prev => [...prev, res]);
         setNewTodoTitle('');
       })
       .catch(() => {
-        showErrorMes('Unable to add a todo');
-        setTempTodo(null);
+        showErrorMessage('Unable to add a todo');
       })
       .finally(() => {
+        setTempTodo(null);
         setIsLoading(false);
         endRedacting(tempId);
       });
@@ -91,13 +90,9 @@ export const App: React.FC = () => {
     todoServices
       .getTodos()
       .then(res => {
-        if (res.length === 0) {
-          showErrorMes('Unable to load todos');
-        } else {
-          setTodos(res);
-        }
+        setTodos(res);
       })
-      .catch(() => showErrorMes('Unable to load todos'));
+      .catch(() => showErrorMessage('Unable to load todos'));
   }, []);
 
   useEffect(() => {
@@ -117,51 +112,36 @@ export const App: React.FC = () => {
   const deleteTodo: DeletingFunction = itemId => {
     startRedacting(itemId);
 
-    return client
-      .delete(`/todos/${itemId}`)
+    return todoServices
+      .deleteTodo(itemId)
       .then(() => {
         setTodos(prev => prev.filter(todo => todo.id !== itemId));
       })
       .catch(err => {
-        showErrorMes('Unable to delete a todo');
+        showErrorMessage('Unable to delete a todo');
         throw err;
       })
       .finally(() => endRedacting(itemId));
   };
 
-  const updateTodo: UpdatingFunction = (itemId, updatedTitle = null) => {
+  const updateTodo: UpdatingFunction = (itemId, updatedTitle = '') => {
     startRedacting(itemId);
-    const unmodifiedTodo = todos.find(todo => todo.id === itemId);
-
-    if (!unmodifiedTodo) {
-      endRedacting(itemId);
-
-      return;
-    }
-
-    if (updatedTitle === unmodifiedTodo.title) {
-      return;
-    }
+    const unmodifiedTodo = todos.find(todo => todo.id === itemId) as Todo;
 
     const updatedTodo = {
       ...unmodifiedTodo,
-      title: updatedTitle !== null ? updatedTitle.trim() : unmodifiedTodo.title,
-      completed:
-        updatedTitle === null
-          ? !unmodifiedTodo.completed
-          : unmodifiedTodo.completed,
+      title: updatedTitle ? updatedTitle.trim() : unmodifiedTodo.title,
+      completed: !updatedTitle
+        ? !unmodifiedTodo.completed
+        : unmodifiedTodo.completed,
     };
-
-    if (updatedTitle !== null && updatedTodo.title === '') {
-      return deleteTodo(itemId);
-    }
 
     setTodos(prev =>
       prev.map(todo => (todo.id === itemId ? updatedTodo : todo)),
     );
 
-    return client
-      .patch<Todo>(`/todos/${itemId}`, updatedTodo)
+    return todoServices
+      .updateTodo(itemId, updatedTodo)
       .then(res =>
         setTodos(prev => prev.map(todo => (todo.id === itemId ? res : todo))),
       )
@@ -169,7 +149,7 @@ export const App: React.FC = () => {
         setTodos(prev =>
           prev.map(todo => (todo.id === itemId ? unmodifiedTodo : todo)),
         );
-        showErrorMes('Unable to update a todo');
+        showErrorMessage('Unable to update a todo');
         throw err;
       })
       .finally(() => endRedacting(itemId));
@@ -181,6 +161,14 @@ export const App: React.FC = () => {
       .map(todo => todo.id);
 
     completedIds.forEach(id => deleteTodo(id));
+  };
+
+  const handleToggleAll = () => {
+    todos.forEach(todo => {
+      if (allCompleted || !todo.completed) {
+        updateTodo(todo.id);
+      }
+    });
   };
 
   return (
@@ -197,13 +185,7 @@ export const App: React.FC = () => {
                 active: allCompleted,
               })}
               data-cy="ToggleAllButton"
-              onClick={() => {
-                todos.forEach(todo => {
-                  if (allCompleted || !todo.completed) {
-                    updateTodo(todo.id);
-                  }
-                });
-              }}
+              onClick={handleToggleAll}
             />
           )}
 
